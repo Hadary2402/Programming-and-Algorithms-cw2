@@ -10,8 +10,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <fstream> // For file operations
-#include <sstream> // Include for istringstream
+
 #define MAX_LEN 200
 #define NUM_COLORS 6
 
@@ -24,12 +23,12 @@ struct Terminal {
     thread th;
 };
 
-vector<Terminal> clients;
-string def_col="\033[0m";
-string colors[] = {"\033[31m", "\033[32m", "\033[33m", "\033[34m", "\033[35m", "\033[36m"};
+std::vector<Terminal> clients;
+std::string def_col="\033[0m";
+std::string colors[] = {"\033[31m", "\033[32m", "\033[33m", "\033[34m", "\033[35m", "\033[36m"};
 int seed = 0;
-mutex cout_mtx;
-mutex clients_mtx;
+std::mutex cout_mtx;
+std::mutex clients_mtx;
 
 string color(int code);
 void set_name(int id, const char name[]);
@@ -37,31 +36,7 @@ void shared_print(const string& str, bool endLine=true);
 void broadcast_message(const string& message, int sender_id);
 void broadcast_message(int num, int sender_id);
 void end_connection(int id);
-bool authenticate_user(const string& username, const string& password);
 void handle_client(int client_socket, int id);
-
-bool authenticate_user(const string& username, const string& password) {
-    // Open the user credentials file
-    ifstream file("user.txt");
-    if (!file) {
-        cerr << "Unable to open file." << endl;
-        return false;
-    }
-
-    // Read credentials from the file and compare with the provided username and password
-    string line;
-    while (getline(file, line)) {
-        istringstream iss(line);
-        string file_username, file_password;
-        if (iss >> file_username >> file_password) {
-            if (file_username == username && file_password == password) {
-                return true; // Authentication successful
-            }
-        }
-    }
-
-    return false; // Authentication failed
-}
 
 int main() {
     int server_socket;
@@ -97,34 +72,10 @@ int main() {
             perror("accept error: ");
             exit(EXIT_FAILURE);
         }
-
-        char username[MAX_LEN];
-        char password[MAX_LEN];
-        int bytes_received_username = recv(client_socket, username, sizeof(username), 0);
-        int bytes_received_password = recv(client_socket, password, sizeof(password), 0);
-
-        // Ensure both username and password are received
-        if (bytes_received_username <= 0 || bytes_received_password <= 0) {
-            cerr << "Failed to receive username or password." << endl;
-            close(client_socket);
-            continue; // Skip handling this client
-        }
-
-        // Null-terminate the received strings
-        username[bytes_received_username] = '\0';
-        password[bytes_received_password] = '\0';
-
-        // Authenticate the user
-        if (!authenticate_user(username, password)) {
-            cout << "Failed to authenticate user: " << username << endl;
-            close(client_socket);
-            continue; // Skip handling this client
-        }
-
         seed++;
         thread t(handle_client, client_socket, seed);
         lock_guard<mutex> guard(clients_mtx);
-        clients.push_back({seed, username, client_socket, move(t)});
+        clients.push_back({seed, "Anonymous", client_socket, move(t)});
     }
 
     for (auto& client : clients) {
@@ -187,46 +138,24 @@ void end_connection(int id) {
 }
 
 void handle_client(int client_socket, int id) {
-    char username[MAX_LEN], password[MAX_LEN];
-    int bytes_received_username = recv(client_socket, username, sizeof(username), 0);
-    int bytes_received_password = recv(client_socket, password, sizeof(password), 0);
-
-    // Ensure both username and password are received
-    if (bytes_received_username <= 0 || bytes_received_password <= 0) {
-        cerr << "Failed to receive username or password." << endl;
-        close(client_socket);
-        return;
-    }
-
-    // Null-terminate the received strings
-    username[bytes_received_username] = '\0';
-    password[bytes_received_password] = '\0';
-    
-    // Authenticate the user
-    if (!authenticate_user(username, password)) {
-        cout << "Failed to authenticate user: " << username << endl;
-        close(client_socket);
-        return;
-    }
-
-    set_name(id, username);
+    char name[MAX_LEN], str[MAX_LEN];
+    recv(client_socket, name, sizeof(name), 0);
+    set_name(id, name);
 
     // Display welcome message
-    string welcome_message = username;
+    string welcome_message = name;
     welcome_message += " has joined";
     broadcast_message("#NULL", id);
-    broadcast_message(id, id);
     broadcast_message(welcome_message, id);
     shared_print(color(id) + welcome_message + def_col);
 
     while (true) {
-        char str[MAX_LEN];
         int bytes_received = recv(client_socket, str, sizeof(str), 0);
         if (bytes_received <= 0)
             break;
         if (strcmp(str, "#exit") == 0) {
             // Display leaving message
-            string message = username;
+            string message = name;
             message += " has left";
             broadcast_message("#NULL", id);
             broadcast_message(id, id);
@@ -235,9 +164,12 @@ void handle_client(int client_socket, int id) {
             end_connection(id);
             break;
         }
-        broadcast_message(username, id);
+        
+
+        
+        broadcast_message(name, id);
         broadcast_message(id, id);
         broadcast_message(str, id);
-        shared_print(color(id) + username + " : " + def_col + str);
+        shared_print(color(id) + name + " : " + def_col + str);
     }
 }
