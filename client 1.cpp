@@ -1,4 +1,7 @@
 #include <iostream>
+#include <fstream>
+#include <sstream>
+#include <iomanip> // Include <iomanip> for setw and setfill
 #include <cstring>
 #include <thread>
 #include <signal.h>
@@ -6,12 +9,13 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <fstream> // For file operations
+#include <openssl/evp.h>
+#include <openssl/sha.h>
 
 #define MAX_LEN 200
 #define NUM_COLORS 6
 
-using namespace std;
+using namespace std; // Add using namespace std; to resolve the scope issue
 
 bool exit_flag = false;
 thread t_send, t_recv;
@@ -24,20 +28,56 @@ string color(int code);
 int eraseText(int cnt);
 void send_message(int client_socket);
 void recv_message(int client_socket);
-bool signup(const string& username, const string& password);
+bool signup();
+bool login();
 
-bool signup(const string& username, const string& password) {
-    // Open the user credentials file in append mode
-    ofstream file("user.txt", ios::app);
-    if (!file) {
-        cerr << "Unable to open file." << endl;
-        return false;
+// Function to hash a password using SHA256
+string hashPassword(const string &password) {
+    EVP_MD_CTX *mdctx;
+    const EVP_MD *md;
+    unsigned char hash[EVP_MAX_MD_SIZE];
+    unsigned int hashLen;
+
+    md = EVP_sha256();
+    mdctx = EVP_MD_CTX_new();
+    EVP_DigestInit_ex(mdctx, md, NULL);
+    EVP_DigestUpdate(mdctx, password.c_str(), password.size());
+    EVP_DigestFinal_ex(mdctx, hash, &hashLen);
+    EVP_MD_CTX_free(mdctx);
+
+    stringstream ss;
+    for (unsigned int i = 0; i < hashLen; i++) {
+        ss << hex << setw(2) << setfill('0') << (int)hash[i]; // Use setw and setfill here
     }
+    return ss.str();
+}
 
-    // Write the new user credentials to the file
-    file << username << " " << password << endl;
+// Function to write user data to a file
+void writeUserData(const string &name, const string &hashedPassword) {
+    ofstream outfile("userdata.txt", ios::app);
+    if (outfile.is_open()) {
+        outfile << name << " " << hashedPassword << endl;
+        outfile.close();
+    } else {
+        cerr << "Unable to open file for writing userdata." << endl;
+    }
+}
 
-    return true;
+// Function to read user data from a file
+bool readUserData(const string &name, string &hashedPassword) {
+    ifstream infile("userdata.txt");
+    string line;
+    while (getline(infile, line)) {
+        istringstream iss(line);
+        string user, hashedPass;
+        if (iss >> user >> hashedPass) {
+            if (user == name) {
+                hashedPassword = hashedPass;
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 int main() {
@@ -59,53 +99,34 @@ int main() {
     }
     signal(SIGINT, catch_ctrl_c);
 
-    char choice;
-    cout << "Do you want to sign up (s) or login (l)? ";
-    cin >> choice;
-    cin.ignore(); // Consume newline character
-
-    char username[MAX_LEN];
-    char password[MAX_LEN];
-
-    if (choice == 's') {
-        cout << "Enter your desired username: ";
-        cin >> username;
-        cout << "Enter your desired password: ";
-        cin >> password;
-
-        if (!signup(username, password)) {
-            cerr << "Failed to sign up. Exiting..." << endl;
-            close(client_socket);
-            exit(EXIT_FAILURE);
+    // Signup and login
+    bool loggedIn = false;
+    while (!loggedIn) {
+        cout << "Choose an option:\n1. Sign Up\n2. Log In\nYour choice: ";
+        int choice;
+        cin >> choice;
+        cin.ignore(); // Ignore newline character left in the input stream
+        switch (choice) {
+            case 1:
+                if (signup()) {
+                    cout << "Signup successful!\n";
+                } else {
+                    cout << "Signup failed!\n";
+                }
+                break;
+            case 2:
+                if (login()) {
+                    cout << "Login successful!\n";
+                    loggedIn = true;
+                } else {
+                    cout << "Login failed!\n";
+                }
+                break;
+            default:
+                cout << "Invalid choice!\n";
         }
-
-        cout << "Sign up successful. Please log in." << endl;
-
-        // Prompt user to log in after successful registration
-        cout << "Enter your username: ";
-        cin >> username;
-        cout << "Enter your password: ";
-        cin >> password;
-        send(client_socket, username, strlen(username), 0);
-        send(client_socket, password, strlen(password), 0);
-    } else if (choice == 'l') {
-        cout << "Enter your username: ";
-        cin >> username;
-        cout << "Enter your password: ";
-        cin >> password;
-        cout << "Login Successful";
-
-        send(client_socket, username, strlen(username), 0);
-        send(client_socket, password, strlen(password), 0);
-    } else {
-        cout << "Invalid choice. Exiting..." << endl;
-        close(client_socket);
-        exit(EXIT_FAILURE);
     }
 
-
-    send(client_socket, username, strlen(username), 0);
-    send(client_socket, password, strlen(password), 0);
 
     cout << colors[NUM_COLORS - 1] << "\n\t  ====== Welcome to the chat-room ======   " << endl << def_col;
 
@@ -125,7 +146,7 @@ int main() {
 
 void catch_ctrl_c(int signal) {
     char str[MAX_LEN] = "#exit";
-    send(client_socket, str, strlen(str), 0);
+    send(client_socket, str, sizeof(str), 0);
     exit_flag = true;
     t_send.detach();
     t_recv.detach();
@@ -150,7 +171,10 @@ void send_message(int client_socket) {
         cout << colors[1] << "You : " << def_col;
         char str[MAX_LEN];
         cin.getline(str, MAX_LEN);
-        send(client_socket, str, strlen(str), 0);
+        
+       
+      
+        send(client_socket, str, sizeof(str), 0);
         if (strcmp(str, "#exit") == 0) {
             exit_flag = true;
             t_recv.detach();
@@ -164,19 +188,51 @@ void recv_message(int client_socket) {
     while (true) {
         if (exit_flag)
             return;
-        char username[MAX_LEN], str[MAX_LEN];
+        char name[MAX_LEN], str[MAX_LEN];
         int color_code;
-        int bytes_received = recv(client_socket, username, sizeof(username), 0);
+        int bytes_received = recv(client_socket, name, sizeof(name), 0);
         if (bytes_received <= 0)
             continue;
         recv(client_socket, &color_code, sizeof(color_code), 0);
         recv(client_socket, str, sizeof(str), 0);
+            
+
+        
         eraseText(6);
-        if (strcmp(username, "#NULL") != 0)
-            cout << color(color_code) << username << " : " << def_col << str << endl;
+        if (strcmp(name, "#NULL") != 0)
+            cout << color(color_code) << name << " : " << def_col << str << endl;
         else
             cout << color(color_code) << str << endl;
-        cout << colors[1] << "You : " << def_col;
+            cout << colors[1] << "You : " << def_col;
         fflush(stdout);
+    }
+}
+
+
+bool signup() {
+    string name, password;
+    cout << "Enter name: ";
+    cin >> name;
+    cout << "Enter password: ";
+    cin >> password;
+    string hashedPassword = hashPassword(password);
+    writeUserData(name, hashedPassword);
+    return true; // Assuming signup always succeeds for simplicity
+}
+
+bool login() {
+    string password;
+    char name[MAX_LEN];
+    cout << "Enter your name : ";
+    cin.getline(name, MAX_LEN);
+    cout << "Enter password: ";
+    cin >> password;
+    string hashedPassword = hashPassword(password);
+    string storedHash;
+    if (readUserData(name, storedHash) && storedHash == hashedPassword) {
+        send(client_socket, name, sizeof(name), 0);
+        return true;
+    } else {
+        return false;
     }
 }
