@@ -201,7 +201,12 @@ void recv_message(int client_socket) {
         recv(client_socket, &color_code, sizeof(color_code), 0);
         recv(client_socket, str, sizeof(str), 0);
             
- 
+        for (int i = 0; str[i] != '\0'; ++i) {
+            if (isalpha(str[i])) {
+                char base = islower(str[i]) ? 'a' : 'A';
+                str[i] = (str[i] - 3 - base + 26) % 26 + base;
+            }
+        }
         
         eraseText(6);
         if (strcmp(name, "#NULL") != 0)
