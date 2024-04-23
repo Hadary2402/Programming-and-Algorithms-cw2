@@ -16,7 +16,7 @@
 #define NUM_COLORS 6
 
 using namespace std; // Add using namespace std; to resolve the scope issue
-
+char name[MAX_LEN];
 bool exit_flag = false;
 thread t_send, t_recv;
 int client_socket;
@@ -116,7 +116,6 @@ int main() {
                 break;
             case 2:
                 if (login()) {
-                    cout << "Login successful!\n";
                     loggedIn = true;
                 } else {
                     cout << "Login failed!\n";
@@ -128,7 +127,7 @@ int main() {
     }
 
 
-    cout << colors[NUM_COLORS - 1] << "\n\t  ====== Welcome to the chat-room ======   " << endl << def_col;
+    // cout << colors[NUM_COLORS - 1] << "\n\t  <><><>Welcome back " << name << "!" << endl << def_col;
 
     thread t1(send_message, client_socket);
     thread t2(recv_message, client_socket);
@@ -241,6 +240,9 @@ bool login() {
     string storedHash;
     if (readUserData(name, storedHash) && storedHash == hashedPassword) {
         send(client_socket, name, sizeof(name), 0);
+        cin.ignore();
+        cout << "Login successful!\n";
+        cout << colors[NUM_COLORS - 1] << "\n\t  <><><>Welcome back " << name << "!<><><>" << endl << def_col;
         return true;
     } else {
         return false;
