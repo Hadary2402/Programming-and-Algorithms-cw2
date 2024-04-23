@@ -172,8 +172,13 @@ void send_message(int client_socket) {
         char str[MAX_LEN];
         cin.getline(str, MAX_LEN);
         
-       
-      
+        // Encrypt outgoing message using Caesar cipher with key 3
+        for (int i = 0; str[i] != '\0'; ++i) {
+            if (isalpha(str[i])) {
+                str[i] = (str[i] + 3 - 'a') % 26 + 'a';
+            }
+        }
+        
         send(client_socket, str, sizeof(str), 0);
         if (strcmp(str, "#exit") == 0) {
             exit_flag = true;
@@ -196,7 +201,7 @@ void recv_message(int client_socket) {
         recv(client_socket, &color_code, sizeof(color_code), 0);
         recv(client_socket, str, sizeof(str), 0);
             
-
+ 
         
         eraseText(6);
         if (strcmp(name, "#NULL") != 0)
