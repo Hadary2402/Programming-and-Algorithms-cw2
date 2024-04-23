@@ -14,31 +14,31 @@ Instructions of Program Usage
 
 3.	Now to Run the Program:
    
-   a.	Compile the codes:
+      a.Compile the codes:
 
-      i.	Open a terminal or cmd on windows.
+         i.	Open a terminal or cmd on windows.
 
-      ii.	Go to the directory that contains the “server.cpp” and “client.cpp” and run the following commands:
+            ii.	Go to the directory that contains the “server.cpp” and “client.cpp” and run the following commands:
 
             For the server: “g++ -o server server.cpp -lpthread -lcrypto”
 
             For the client: “g++ -o client client.cpp -std=c++11 -lssl -lcrypto -pthread”
 
-   b.	Run the program in one of the terminals after navigating to its directory with the command: “./client”
+      b.Run the program in one of the terminals after navigating to its directory with the command: “./client”
 
-   c.	User interaction:
+       c.User interaction:
 
-      i.	After the client runs, the user is prompted with options to sign up, login, or exiting the program.
+            i.	After the client runs, the user is prompted with options to sign up, login, or exiting the program.
 
-      ii.	The user can then enter their credentials when signing and then logging in.
+            ii.	The user can then enter their credentials when signing and then logging in.
 
-      iii.	Now after the user has logged in, the user joins the chat room and it’s announced in the server and can start sending and receiving messages.
+            iii.	Now after the user has logged in, the user joins the chat room and it’s announced in the server and can start sending and receiving messages.
 
-   d.	Exiting the Program:
+       d.Exiting the Program:
 
-      i.	When exiting the client program, the user can simple type “#exit” and press enter.
+            i.	When exiting the client program, the user can simple type “#exit” and press enter.
 
-      ii.	To stop the server from running use CTRL+C when clicked on the terminal, this also works on the client.
+            ii.	To stop the server from running use CTRL+C when clicked on the terminal, this also works on the client.
 
 Notes:
 
