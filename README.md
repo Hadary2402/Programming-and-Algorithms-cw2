@@ -1,5 +1,7 @@
 # Programming-and-Algorithms-cw2
+
 This is the repository for a chat-room application with encryption, hashing, error handling, sign up and log in, etc.
+![README picture](https://github.com/Hadary2402/Programming-and-Algorithms-cw2/assets/114479685/c72eaf60-07c5-4d69-a4bc-893482353586)
 
 Instructions of Program Usage
 
