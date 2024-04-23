@@ -61,7 +61,8 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    cout << colors[NUM_COLORS - 1] << "\n\t  ====== Welcome to the chat-room ======   " << endl << def_col;
+    cout << colors[NUM_COLORS - 1] << "\n\t  <><><>Welcome To BestSec's Socket Chat Application!<><><>   " << endl << def_col;
+    
 
     while (true) {
         struct sockaddr_in client;
@@ -146,6 +147,7 @@ void handle_client(int client_socket, int id) {
     string welcome_message = name;
     welcome_message += " has joined";
     broadcast_message("#NULL", id);
+    broadcast_message(id, id);
     broadcast_message(welcome_message, id);
     shared_print(color(id) + welcome_message + def_col);
 
@@ -165,6 +167,7 @@ void handle_client(int client_socket, int id) {
             break;
         }
         
+        // Decrypt incoming message using Caesar cipher with key 3
 
         
         broadcast_message(name, id);
