@@ -20,9 +20,9 @@ i.	Open a terminal or cmd on windows.
 
 ii.	Go to the directory that contains the “server.cpp” and “client.cpp” and run the following commands:
 
-For the server: “g++ -o server server.cpp -lpthread -lcrypto”
+      For the server: “g++ -o server server.cpp -lpthread -lcrypto”
 
-For the client: “g++ -o client client.cpp -std=c++11 -lssl -lcrypto -pthread”
+      For the client: “g++ -o client client.cpp -std=c++11 -lssl -lcrypto -pthread”
 
 b.	Run the program in one of the terminals after navigating to its directory with the command: “./client”
 
